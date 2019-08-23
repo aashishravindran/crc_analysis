@@ -6,28 +6,33 @@ Created on Mon Aug 19 13:30:06 2019
 @author: ashubunutu
 """
 
-from collections import Counter
+from collections import Counter,OrderedDict
 import matplotlib.pyplot as plt
+import seaborn as sns
+import scipy
+import numpy as np
+import statistics
 ## From Merge 
 
 def burst_len_frame(frame,seq):
     count=0
     arr=[]
+    idx=[]
     dict={}
     for i in range(0,len(frame)):
         if frame[i] != 'y'and count>=1:
             arr.append(count)
+            idx.append(i)
             count=0
         elif frame[i] == 'y':
             count+=1
     if not arr:
-        dict[seq]=0
-        return dict
+        return []
          
     else:
          loss_len=Counter(arr)
          dict[seq]=loss_len
-         return dict
+         return [dict,loss_len,idx]
         
 
 def get_interval_frame(frame,seq):
@@ -42,12 +47,12 @@ def get_interval_frame(frame,seq):
             
     if  not arr:
             dict[seq]=0
-            return dict
+            return []
        
     else:
          interval=Counter(arr)
          dict[seq]=interval
-         return dict
+         return [dict,interval]
     
 
 def get_seq(frame):
@@ -118,63 +123,106 @@ line=file.readlines()
 run=0;
 frame=[]
 
-burst_len,interval,byte_level=[],[],[]
-all_runs={}
+burst_len,index,byte_level=[],[],[]
+all_runs,all_runs_int={},{}
 byte_indices={}
 
 for i in range(0,len(line)):
    if ('========' in line[i] and i<3) or len(line[i].strip()) == 0:
          continue;
    elif '========' in line[i] or i==len(line)-1:
-        frame.extend([burst_len,interval])
-        all_runs[run]=frame
+        
+#        frame.append(burst_len)
+        
+        per_run=Counter(burst_len)
+        per_run_interval=Counter(index)
+        for key,value in per_run.items():
+            per_run[key]=round(value/len(burst_len)*100)
+            
+        
+        for key,value in per_run_interval.items():
+            per_run_interval[key]=round(value/len(index)*100)
+    
+        all_runs[run]=per_run
+        all_runs_int[run]=per_run_interval
         byte_indices[run]=Counter(get_byte_loss_data(byte_level))
         burst_len=[]
-        interval=[]
+        index=[]
         frame=[]
         run+=1
    else:
         seq=get_seq(line[i])
-        burst_len.append(burst_len_frame(line[i],seq))
-        interval.append(get_interval_frame(line[i],seq))
-        byte_level.append(line[i])
+#        burst_len.append(burst_len_frame(line[i],seq))
+#        interval.append(get_interval_frame(line[i],seq))
+        burst_len_ret=burst_len_frame(line[i],seq)
+        interval=get_interval_frame(line[i],seq)
+        if len(burst_len_ret)>0:
+            burst_len_count=burst_len_ret[1]
+#            print(burst_len_ret[0])
+            for key,value in burst_len_count.items():
+                burst_len.append(key)   
+        if len(interval) >0:
+            interval_cnt=interval[1]
+            for key,value in interval_cnt.items():
+                index.append(key)
+                
+            
         
+        byte_level.append(line[i])
+             
+
+
+#Burst Len within a frame across runs
+## Corruption ever 2 bytes happens 7% of the timie per 
         
 
 data_clensing=remove_none_type(all_runs)
+single_run=all_runs[7]
+print(single_run)
+x,y=zip(*(single_run.items()))
+plt.bar(x,y)
+
+## Interval within a frame across runns 
+##  chance of corruption happening every 2 bytes is 6% the hghest
+
+single_run_int=all_runs_int[7]
+print(single_run_int)
+x,y=zip(*(single_run_int.items()))
+plt.bar(x,y)
 
 
-## Plotting Code Starts here
-#print("Total Number of Runs"+str(len(all_runs)))
-#runNo=int(input('Please Enter a value between(0'+'-'+str(len(all_runs)-1)+ '): '))
-#filter_val=int(input('Enter Filter Value: '))
-#
-#
-#x,y=[],[]
-#for key,value in run.items():
-#    if int(value) > filter_val:
-#        x.append(key)
-#        y.append(value)
-#plt.bar(x,y)
-#plt.savefig('Crc_analysis_for_Run_no'+str(runNo)+'.png')
-#plt.clf()
-        
 ret=get_all_buckets(10)
-val=[]
 
-i=1
-res={}
-run=sorted(byte_indices[1].keys())
+runN0=7
+
+
+run=byte_indices[runN0]
+max_val=max(byte_indices[runN0].values())
+min_val=min(byte_indices[runN0].values())
+median_val=round(statistics.median(byte_indices[runN0].values()))
+
+max_val_loc,min_val_loc,median_val_loc,outliers,out_inde=[],[],[],[],[]
+maxval_val,median_val_val,min_val_val=[],[],[]
+
 for key,value in run.items():
-   f=ret[i]
-   print(key)
-#   if key > f and i<len(ret)-1:
-#       bucket_format=str(str(i-1)+'-'+str(i))
-#       me_val=sum(val)/len(val)
-#       res[bucket_format]=me_val
-#       val=[]
-#       bucket_format=''
-#       i+=1
-#   else:
-#       print(value)
-#       val.append(value)
+    if value > min_val and value<median_val:
+        min_val_loc.append(key)
+        min_val_val.append(value)
+    elif value > median_val and value<max_val:
+        median_val_loc.append(key)
+        median_val_val.append(value)
+    elif value >= max_val:
+        max_val_loc.append(key)
+        maxval_val.append(value)
+
+#
+plt.bar(min_val_loc,min_val_val,color='red',label='Min_val-'+str(min_val)+'Med -'+str(median_val))
+plt.legend()
+
+
+
+
+
+        
+    
+
