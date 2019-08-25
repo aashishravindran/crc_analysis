@@ -15,11 +15,6 @@ import numpy as np
 import statistics
 
 
-
-
-
-
-
 def file_read(file):
     line=file.readlines()
     runN0=0;
@@ -76,11 +71,11 @@ def get_interval_perc(run):
                 count=0
             elif i!='y':
                 count+=1
-    print(len(arr))
+#    print(len(arr))
     if len(arr)>0:
-        interval=Counter(arr)
+        interval=Counter(arr).most_common(3)
         print(interval)
-        for key,value in interval.items():
+        for key,value in interval:
             intval[key]=(value/len(arr)*100)
         return intval
     else:
@@ -137,13 +132,11 @@ def get_byte_loss_data(frame,length):
     arr=[]
     d={}
     st=''
-    for i in range(0,len(frame)):
-        st+=(frame[i])
-        for k in range(0,len(st)):
-            if st[k]=='y':
-                arr.append(k)
-        st=''
-    
+    for recv in frame:
+        for idx,i in enumerate(recv):
+            if i=='y':
+                arr.append(idx)
+            
     byte_loss=Counter(arr)
     
     
@@ -153,21 +146,24 @@ def get_byte_loss_data(frame,length):
     max_val=max(byte_loss.values())
     min_val=min(byte_loss.values())
     median_val=round(statistics.median(byte_loss.values()))
-    
+    t=[]
+    t.extend([min_val,median_val,max_val])
     
     for key,value in byte_loss.items():
-        if value > min_val and value<median_val:
+        if  value<median_val:
             min_val_loc.append(key)
-            min_val_val.append(value)
-        elif value > median_val and value<max_val:
+            min_val_val.append(((value/length)*100))
+        elif value<max_val:
             median_val_loc.append(key)
-            median_val_val.append(value)
+            median_val_val.append(((value/length)*100))
         elif value >= max_val:
             max_val_loc.append(key)
-            maxval_val.append(value)
+            maxval_val.append(((value/length)*100))
 
-         
-    return [byte_loss,min_val_loc,min_val_val,median_val_loc,median_val_val,max_val_loc,maxval_val]
+
+
+     
+    return [byte_loss,[min_val_loc,min_val_val],[median_val_loc,median_val_val],[max_val_loc,maxval_val],t]
 
 
 

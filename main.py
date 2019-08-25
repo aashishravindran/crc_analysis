@@ -27,7 +27,7 @@ except FileExistsError:
     print("Directory " , dirName ,  " already exists")
 
 
-for i in range (1,5):
+for i in range (1,4):
     try:
         st=dirName+'/Node_'+str(i)
         os.mkdir(st)
@@ -71,13 +71,32 @@ for i,value in enumerate(arr):
 
     
     plot_burst_len(value,st,frame1) 
+    plot_missing_across_runs(st,value,frame1)
 
 
 path=dirName
 plot_consolidated_run_master(arr,path)
 
 
-    
+ret=get_byte_loss_data(recv_1[0],len(recv_1[0]))
+
+
+x1=ret[1][0]
+y1=ret[1][1]
+
+x2=ret[2][0]
+y2=ret[2][1]
+
+
+x3=ret[3][0]
+y3=ret[3][1]
+plt.bar(x1,y1,color='red')
+plt.bar(x2,y2,color='blue')
+plt.bar(x3,y3,color='green')
+
+
+
+
 
   # used to compuet pmf and interval across all runs
 
